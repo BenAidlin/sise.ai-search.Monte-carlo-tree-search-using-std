@@ -73,12 +73,12 @@ class Node:
         self.untriedMoves = state.GetMoves() # future child nodes
         self.playerJustMoved = state.playerJustMoved # the only part of the state that the Node needs later
         
-    def UCTSelectChild(self):
+    def UCTSelectChild(self, selection_function, w):
         """ Use the UCB1 formula to select a child node. Often a constant UCTK is applied so we have
             lambda c: c.wins/c.visits + UCTK * sqrt(2*log(self.visits)/c.visits to vary the amount of
             exploration versus exploitation.
         """
-        s = sorted(self.childNodes, key = lambda c: c.wins/c.visits + sqrt(2*log(self.visits)/c.visits))[-1]
+        s = sorted(self.childNodes, key = lambda c: (1-w)*(c.wins/c.visits + sqrt(2*log(self.visits)/c.visits)) + w*selection_function(c))[-1]
         return s
     
     def AddChild(self, m, s):
@@ -118,7 +118,7 @@ class Node:
         return s
 
 
-def UCT(rootstate, itermax, verbose = False):
+def UCT(rootstate, itermax, verbose = False, selected_std_function=lambda c: 0, std_weight=0):
     """ Conduct a UCT search for itermax iterations starting from rootstate.
         Return the best move from the rootstate.
         Assumes 2 alternating players (player 1 starts), with game results in the range [0.0, 1.0]."""
@@ -131,7 +131,7 @@ def UCT(rootstate, itermax, verbose = False):
 
         # Select
         while node.untriedMoves == [] and node.childNodes != []: # node is fully expanded and non-terminal
-            node = node.UCTSelectChild()
+            node = node.UCTSelectChild(selection_function=selected_std_function, w=std_weight)
             state.DoMove(node.move)
 
         # Expand
@@ -155,33 +155,53 @@ def UCT(rootstate, itermax, verbose = False):
 
     return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
                 
-def UCTPlayGame():
+def UCTPlayGame(state=None, player1_uct_iter=50, player2_uct_iter=50, uct_verbosity=False, std_weight=0, selected_std_function=lambda c: 0):
     """ Play a sample game between two UCT players where each player gets a different number 
         of UCT iterations (= simulations = tree nodes).
     """
-    # state = OthelloState(4) # uncomment to play Othello on a square board of the given size
-    # state = OXOState() # uncomment to play OXO
-    # state = NimState(150) # uncomment to play Nim with the given number of starting chips
-    state = C4State()   #Uncomment to simulate a full game of connect 4
+    if(not state): state = C4State()
     while (state.GetMoves() != []):
         print(str(state))
         if state.playerJustMoved == 1:
-            m = UCT(rootstate = state, itermax = 50, verbose = False) # player 2 moves
+            m = UCT(rootstate = state, itermax = player1_uct_iter, verbose = uct_verbosity) # player 2 moves
         else:
-            m = UCT(rootstate = state, itermax = 25, verbose = False) # player 1 moves
+            m = UCT(rootstate = state, itermax = player2_uct_iter, verbose = uct_verbosity, 
+                    selected_std_function=selected_std_function, std_weight=std_weight) # player 1 moves, and gets std addition
         print("Best Move: " + str(m) + "\n")
         state.DoMove(m)
+    to_return = None
     if state.GetResult(state.playerJustMoved) == 1.0:
         print("Player " + str(state.playerJustMoved) + " wins!")
+        to_return = state.playerJustMoved
     elif state.GetResult(state.playerJustMoved) == 0.0:
         print("Player " + str(3 - state.playerJustMoved) + " wins!")
-    else: print("Nobody wins!")
+        to_return = 3 - state.playerJustMoved
+    else: 
+        print("Nobody wins!")
+        to_return = 1.5
     print(state)
+    return to_return
 
 if __name__ == "__main__":
-    """ Play a single game to the end using UCT for both players. 
-    """
-    UCTPlayGame()
+    # state = OthelloState(4) # uncomment to play Othello on a square board of the given size
+    # state = OXOState() # uncomment to play OXO
+    # state = NimState(150) # uncomment to play Nim with the given number of starting chips
+    #  state = C4State()   #Uncomment to simulate a full game of connect 4
+
+    results_C4_50_50 = []
+    for _ in range(20):
+        state = C4State()
+        iter_1 = 50
+        iter_2 = 50
+        verbosity = False
+        print(f'iteration number {_}')
+        results_C4_50_50.append(
+            UCTPlayGame(state=state, player1_uct_iter=iter_1, player2_uct_iter=iter_2, uct_verbosity=verbosity))
+    results_C4_50_50_mean = sum(results_C4_50_50) / len(results_C4_50_50)
+    results_C4_50_50_std = sqrt(sum([(result - results_C4_50_50_mean)**2 for result in results_C4_50_50]) / len(results_C4_50_50))
+    print(f'results_C4_50_50: {results_C4_50_50}')
+    print(f'results_C4_50_50_mean: {results_C4_50_50_mean}')
+    print(f'results_C4_50_50_std: {results_C4_50_50_std}')
 
             
                           
