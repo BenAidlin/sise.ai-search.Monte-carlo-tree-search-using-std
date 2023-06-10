@@ -27,7 +27,7 @@ class NimState:
     def GetMoves(self):
         """ Get all possible moves from this state.
         """
-        return range(1,min([4, self.chips + 1]))
+        return [i for i in range(1,min([4, self.chips + 1]))]
     
     def GetResult(self, playerjm):
         """ Get the game result from the viewpoint of playerjm. 

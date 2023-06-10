@@ -15,8 +15,8 @@ class OthelloState:
         assert sz == int(sz) and sz % 2 == 0 # size must be integral and even
         for y in range(sz):
             self.board.append([0]*sz)
-        self.board[sz/2][sz/2] = self.board[sz/2-1][sz/2-1] = 1
-        self.board[sz/2][sz/2-1] = self.board[sz/2-1][sz/2] = 2
+        self.board[int(sz/2)][int(sz/2)] = self.board[int(sz/2)-1][int(sz/2)-1] = 1
+        self.board[int(sz/2)][int(sz/2)-1] = self.board[int(sz/2)-1][int(sz/2)] = 2
 
     def Clone(self):
         """ Create a deep clone of this game state.

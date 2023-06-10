@@ -150,8 +150,8 @@ def UCT(rootstate, itermax, verbose = False):
             node = node.parentNode
 
     # Output some information about the tree - can be omitted
-    if (verbose): print rootnode.TreeToString(0)
-    else: print rootnode.ChildrenToString()
+    if (verbose): print(rootnode.TreeToString(0))
+    else: print(rootnode.ChildrenToString())
 
     return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
                 
@@ -159,23 +159,23 @@ def UCTPlayGame():
     """ Play a sample game between two UCT players where each player gets a different number 
         of UCT iterations (= simulations = tree nodes).
     """
-    # state = OthelloState(8) # uncomment to play Othello on a square board of the given size
+    # state = OthelloState(4) # uncomment to play Othello on a square board of the given size
     # state = OXOState() # uncomment to play OXO
-    # state = NimState(15) # uncomment to play Nim with the given number of starting chips
+    # state = NimState(150) # uncomment to play Nim with the given number of starting chips
     state = C4State()   #Uncomment to simulate a full game of connect 4
     while (state.GetMoves() != []):
-        print str(state)
+        print(str(state))
         if state.playerJustMoved == 1:
-            m = UCT(rootstate = state, itermax = 1000, verbose = False) # play with values for itermax and verbose = True
+            m = UCT(rootstate = state, itermax = 50, verbose = False) # player 2 moves
         else:
-            m = UCT(rootstate = state, itermax = 100, verbose = False)
-        print "Best Move: " + str(m) + "\n"
+            m = UCT(rootstate = state, itermax = 25, verbose = False) # player 1 moves
+        print("Best Move: " + str(m) + "\n")
         state.DoMove(m)
     if state.GetResult(state.playerJustMoved) == 1.0:
-        print "Player " + str(state.playerJustMoved) + " wins!"
+        print("Player " + str(state.playerJustMoved) + " wins!")
     elif state.GetResult(state.playerJustMoved) == 0.0:
-        print "Player " + str(3 - state.playerJustMoved) + " wins!"
-    else: print "Nobody wins!"
+        print("Player " + str(3 - state.playerJustMoved) + " wins!")
+    else: print("Nobody wins!")
     print(state)
 
 if __name__ == "__main__":
