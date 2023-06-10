@@ -23,6 +23,7 @@ from Othello import OthelloState
 from Nim import NimState
 from OXO import OXOState
 from Connect4 import C4State
+from collections import Counter
 
 class GameState:
     """ A state of the game, i.e. the game board. These are the only functions which are
@@ -72,6 +73,8 @@ class Node:
         self.visits = 0
         self.untriedMoves = state.GetMoves() # future child nodes
         self.playerJustMoved = state.playerJustMoved # the only part of the state that the Node needs later
+        self.rollouts_counter = Counter()
+        self.last_rollout_res = None
         
     def UCTSelectChild(self, selection_function, w):
         """ Use the UCB1 formula to select a child node. Often a constant UCTK is applied so we have
@@ -95,6 +98,8 @@ class Node:
         """
         self.visits += 1
         self.wins += result
+        self.rollouts_counter[result] += 1
+        self.last_rollout_res = result
 
     def __repr__(self):
         return "[M:" + str(self.move) + " W/V:" + str(self.wins) + "/" + str(self.visits) + " U:" + str(self.untriedMoves) + "]"
@@ -182,26 +187,91 @@ def UCTPlayGame(state=None, player1_uct_iter=50, player2_uct_iter=50, uct_verbos
     print(state)
     return to_return
 
+def regular_std(node):
+    c = node.rollouts_counter
+    n = node.visits
+    mean = sum([k*v for k, v in c.items()])/n
+    std = 0
+    for k, v in c.items():
+        std += v*((k-mean)**2)
+    std = sqrt(std/n)
+    return std
+
+def last_res_std(node):
+    c = node.rollouts_counter
+    n = node.visits
+    mean = sum([k*v for k, v in c.items()])/n
+    std = abs(mean - node.last_rollout_res)
+    return std
+
+def get_game_instance(name, params_list):
+    if name == 'nim':
+        return NimState(params_list[0])
+    elif name == 'c4':
+        return C4State()
+    elif name == 'xo':
+        return OXOState()
+    else:
+        return OthelloState(params_list[0])
+
 if __name__ == "__main__":
     # state = OthelloState(4) # uncomment to play Othello on a square board of the given size
     # state = OXOState() # uncomment to play OXO
     # state = NimState(150) # uncomment to play Nim with the given number of starting chips
     #  state = C4State()   #Uncomment to simulate a full game of connect 4
-
-    results_C4_50_50 = []
-    for _ in range(20):
-        state = C4State()
-        iter_1 = 50
-        iter_2 = 50
-        verbosity = False
-        print(f'iteration number {_}')
-        results_C4_50_50.append(
-            UCTPlayGame(state=state, player1_uct_iter=iter_1, player2_uct_iter=iter_2, uct_verbosity=verbosity))
-    results_C4_50_50_mean = sum(results_C4_50_50) / len(results_C4_50_50)
-    results_C4_50_50_std = sqrt(sum([(result - results_C4_50_50_mean)**2 for result in results_C4_50_50]) / len(results_C4_50_50))
-    print(f'results_C4_50_50: {results_C4_50_50}')
-    print(f'results_C4_50_50_mean: {results_C4_50_50_mean}')
-    print(f'results_C4_50_50_std: {results_C4_50_50_std}')
+    std_w = [0.5, 0.2, 0.1, 0.05, 0.03, 0.01, 0]
+    std_funcs = [regular_std, last_res_std]
+    val_1_list = [15, 25, 50, 100]
+    val_2_list = [15, 50, 25, 200]
+    nim_d_dict = {'iter_1_vals': val_1_list,
+                  'iter_2_vals': val_2_list,
+                  'std_w': std_w,
+                  'std_funcs': std_funcs,
+                  'param': [15, 50, 100, 150, 1000]}
+    c4_d_dict = {'iter_1_vals': val_1_list,
+                'iter_2_vals': val_2_list,
+                'std_w': std_w,
+                'std_funcs': std_funcs,
+                'param': [None]}
+    xo_d_dict = {'iter_1_vals': val_1_list,
+                'iter_2_vals': val_2_list,
+                'std_w': std_w,
+                'std_funcs': std_funcs,
+                'param': [None]}
+    ot_d_dict = {'iter_1_vals': val_1_list,
+                'iter_2_vals': val_2_list,
+                'std_w': std_w,
+                'std_funcs': std_funcs,
+                'param': [4,8]}
+    games_details = {'nim': nim_d_dict, 'c4': c4_d_dict, 'xo': xo_d_dict, 'ot': ot_d_dict}
+    for game_name, details in games_details.items():
+        for w in details['std_w']:
+            for func in details['std_funcs']:
+                for i in range(len(details['iter_1_vals'])):
+                    for param in details['param']:
+                        results_C4_50_50 = []
+                        iter_1 = details['iter_1_vals'][i]
+                        iter_2 = details['iter_2_vals'][i]
+                        std_weight = w
+                        std_func = func
+                        verbosity = False
+                        for _ in range(100):
+                            state = get_game_instance(game_name, param)
+                            print(f'iteration number {_}')
+                            results_C4_50_50.append(
+                                UCTPlayGame(state=state, player1_uct_iter=iter_1, player2_uct_iter=iter_2, uct_verbosity=verbosity,
+                                            std_weight=std_weight, selected_std_function=std_func))
+                        results_C4_50_50_mean = sum(results_C4_50_50) / len(results_C4_50_50)
+                        results_C4_50_50_std = sqrt(sum([(result - results_C4_50_50_mean)**2 for result in results_C4_50_50]) / len(results_C4_50_50))
+                        with open('./results.txt', 'a') as f:
+                            f.write(f'GAME: {game_name}')
+                            f.write(f'iter details: std_w-{w}, std_func-{func.__name__}, func_param-{param}, iter1-{iter_1}, iter2-{iter_2}')
+                            f.write(f'results_C4_50_50: {results_C4_50_50}')
+                            f.write(f'results_C4_50_50_mean: {results_C4_50_50_mean}')
+                            f.write(f'results_C4_50_50_std: {results_C4_50_50_std}')
+                            f.write('******************************')
+        with open('./results.txt', 'a') as f:
+            f.write('-----------------------------------------------------------------------------')
 
             
                           

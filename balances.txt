@@ -1,0 +1,6 @@
+NimState(150)
+player 1: 25, player 2: 50
+
+state = C4State()
+player 1: 35, player 2: 50
+
