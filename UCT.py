@@ -214,11 +214,16 @@ def get_game_instance(name, param):
     else:
         return OthelloState(param)
 
+
+import pandas as pd
+
 if __name__ == "__main__":
     # state = OthelloState(4) # uncomment to play Othello on a square board of the given size
     # state = OXOState() # uncomment to play OXO
     # state = NimState(150) # uncomment to play Nim with the given number of starting chips
     #  state = C4State()   #Uncomment to simulate a full game of connect 4
+    pd_results = pd.DataFrame(
+        columns=['game', 'std_weight', 'std_function', 'iterations_for_player_1', 'iterations_for_player_2', 'mean', 'std'])
     std_w = [0.5, 0.1, 0.05, 0.01, 0]
     std_funcs = [regular_std, last_res_std]
     val_1_list = [15, 25, 50, 100]
@@ -271,6 +276,11 @@ if __name__ == "__main__":
                             f.write(f'results mean: {results_C4_50_50_mean}\n')
                             f.write(f'results std: {results_C4_50_50_std}\n')
                             f.write('******************************\n')
+                        result_dict = {'game': game_name if param == None else f'{game_name}_{param}' , 
+                                       'std_weight': w, 'std_function': func.__name__, 
+                                       'iterations_for_player_1': iter_1, 'iterations_for_player_2': iter_2, 
+                                       'mean': results_C4_50_50_mean, 'std': results_C4_50_50_std}
+                        pd_results = pd_results.append(result_dict, ignore_index=True)
         
 
             
