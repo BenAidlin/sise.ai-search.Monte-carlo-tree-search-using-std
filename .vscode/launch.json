@@ -5,10 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "UCT",
             "type": "python",
             "request": "launch",
             "program": "./UCT.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "results parser",
+            "type": "python",
+            "request": "launch",
+            "program": "./results_parser.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }
